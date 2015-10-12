@@ -133,8 +133,8 @@ public class MainActivity extends FragmentActivity implements LocationListener, 
         mOldCurrentLocation = mCurrentLocation;
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        // addMarker();
-        addLines ();
+        addMarker();
+        // addLines ();
     }
 
     private void addLines() {
