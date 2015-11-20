@@ -1,8 +1,15 @@
 package com.wwwme.locationtrackergooglemaps;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.location.Location;
 import com.google.android.gms.location.LocationListener;
+import android.provider.Settings;
+
+import android.media.audiofx.BassBoost;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -43,8 +50,9 @@ public class MainActivity extends FragmentActivity implements LocationListener, 
         Location mOldCurrentLocation;
         String mLastUpdateTime;
         GoogleMap googleMap;
+        private final Context context = this;
 
-        // @Override
+    // @Override
         // protected void onCreate(Bundle savedInstanceState) {
         //     super.onCreate(savedInstanceState);
         //    setContentView(R.layout.activity_main);
@@ -65,7 +73,7 @@ public class MainActivity extends FragmentActivity implements LocationListener, 
         if (!isGooglePlayServicesAvailable()) {
             finish();
         }
-        createLocationRequest();
+           createLocationRequest();
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
@@ -110,6 +118,35 @@ public class MainActivity extends FragmentActivity implements LocationListener, 
         startLocationUpdates();
     }
 
+    //16.10.2015 - Zlamala: Implementierung Fehlermeldung wenn GPS nicht eingeschaltet ist
+
+    public void showSettingsAlert() {
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(context);
+
+        alertDialog.setTitle("GPS is settings");
+
+        alertDialog.setMessage("GPS is not enabled. Do you want to go to settings menu?");
+
+        alertDialog.setPositiveButton("Settings", new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                context.startActivity(intent);
+            }
+        });
+
+        alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        alertDialog.show();
+    }
+
 
     protected void startLocationUpdates() {
         PendingResult<Status> pendingResult = LocationServices.FusedLocationApi.requestLocationUpdates(
@@ -130,20 +167,28 @@ public class MainActivity extends FragmentActivity implements LocationListener, 
     @Override
     public void onLocationChanged(Location location) {
         Log.d(TAG, "Firing onLocationChanged..............................................");
-        mOldCurrentLocation = mCurrentLocation;
+        if (mOldCurrentLocation == null) {
+            mOldCurrentLocation = location;
+        }
+        else {
+            mOldCurrentLocation = mCurrentLocation;
+        }
         mCurrentLocation = location;
+
+        // 16.10.2015 - Zlamala: Test für addLines() - Ausgabe der alten und neuen Koordinaten
+        Log.d(TAG, "Old Location: " + mOldCurrentLocation.getLatitude() + " " + mOldCurrentLocation.getLongitude());
+        Log.d(TAG, "Current Location: " + mCurrentLocation.getLatitude()+ " " + mCurrentLocation.getLongitude());
+
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        addMarker();
-        // addLines ();
+        // addMarker();
+        addLines ();
     }
 
     private void addLines() {
         LatLng oldLatLng = new LatLng(mOldCurrentLocation.getLatitude(), mOldCurrentLocation.getLongitude());
         LatLng currentLatLng = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-        googleMap
-                .addPolyline((new PolylineOptions())
-                        .add(oldLatLng, currentLatLng).width(5).color(Color.BLUE)
-                        .geodesic(true));
+
+        googleMap.addPolyline((new PolylineOptions()).add(oldLatLng, currentLatLng).width(5).color(Color.BLUE).geodesic(true));
         // move camera to zoom on map
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 13));
     }
@@ -151,6 +196,8 @@ public class MainActivity extends FragmentActivity implements LocationListener, 
 
 
     private void addMarker() {
+
+
         MarkerOptions options = new MarkerOptions();
 
         // following four lines requires 'Google Maps Android API Utility Library'
